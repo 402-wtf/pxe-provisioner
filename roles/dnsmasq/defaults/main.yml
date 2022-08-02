@@ -1,0 +1,4 @@
+---
+# defaults file for dnsmasq
+listening_interface: eno0
+tftp_root: /var/tftp

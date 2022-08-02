@@ -1,0 +1,3 @@
+---
+ansible_first_login_password: userpass
+listening_interface: enp1s0

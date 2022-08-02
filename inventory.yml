@@ -1,0 +1,7 @@
+all:
+  hosts:
+  children:
+    provisioner:
+      hosts:
+        10.0.0.3:
+          ansible_host: 10.0.0.3

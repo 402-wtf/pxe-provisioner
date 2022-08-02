@@ -1,0 +1,10 @@
+---
+
+- name: Provision iPXE provisioner
+  gather_facts: false
+  hosts: provisioner
+  roles:
+    - setup_ssh
+    - python
+    - dnsmasq
+  tasks:

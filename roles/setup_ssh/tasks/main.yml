@@ -1,0 +1,87 @@
+---
+# tasks file for setup_ssh
+- name: Check is sshpass installed
+  delegate_to: localhost
+  run_once: true
+  shell: command -v sshpass >/dev/null 2>&1
+  register: is_sshpass_exist
+  ignore_errors: true
+
+- name: Collect only facts for localhost
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.setup:
+
+- block:
+  - name: Install sshpass
+    when: is_sshpass_exist
+    delegate_to: localhost
+    become: true
+    ansible.builtin.package:
+      name: sshpass
+      state: present
+  rescue:
+    - name: Install sshpass (Archlinux)
+      when:
+      delegate_to: localhost
+      become: true
+      run_once: true
+      community.general.pacman:
+        name: sshpass
+        state: present
+
+- name: Check known_hosts for {{ inventory_hostname }}
+  local_action: shell ssh-keygen -F {{ inventory_hostname }}
+  register: has_entry_in_known_hosts_file
+  changed_when: false
+  ignore_errors: true
+- name: Ignore host key for {{ inventory_hostname }} on first run
+  set_fact:
+    ansible_ssh_common_args: "{% if has_entry_in_known_hosts_file == 1 %}-o StrictHostKeyChecking=no{% endif %}"
+
+- name: "Check if host is reachable"
+  wait_for:
+    timeout: 0
+  register: connect_rs
+  ignore_unreachable: true
+
+- when: connect_rs is unreachable
+  name: "Generate SSH key {{ ansible_ssh_private_key_file }}"
+  delegate_to: localhost
+  run_once: true
+  openssh_keypair:
+    path: "{{ playbook_dir }}/{{ ansible_ssh_private_key_file }}"
+    type: rsa
+    size: 4096
+    state: present
+    force: false
+
+- when: connect_rs is unreachable
+  name: "Generate provisioning script"
+  delegate_to: localhost
+  ansible.builtin.template:
+    src: setup_service_user.sh.j2
+    dest: setup_service_user.sh
+    mode: 0644
+
+- when: connect_rs is unreachable and ansible_host != 'localhost'
+  name: "Setup first login script"
+  delegate_to: localhost
+  command: sshpass -p {{ ansible_first_login_password }} \
+    scp -T {{ ansible_ssh_common_args }} setup_service_user.sh {{ ansible_first_login_user }}@{{ ansible_host }}:~
+
+
+- when: connect_rs is unreachable and ansible_host != 'localhost'
+  name: "Run first login script"
+  delegate_to: localhost
+  command: sshpass -p {{ ansible_first_login_password }} \
+    ssh -T {{ ansible_ssh_common_args }} {{ ansible_first_login_user }}@{{ ansible_host }} 'chmod 755 setup_service_user.sh && echo '{{ansible_first_login_password}}' | sudo -S ./setup_service_user.sh'
+
+- name: "Gather facts about host"
+  setup:
+
+- name: Set authorized key taken from file
+  ansible.posix.authorized_key:
+    user: '{{ ansible_user }}'
+    state: present
+    key: "{{ lookup('file',  playbook_dir + '/' + ansible_ssh_private_key_file + '.pub' ) }}"

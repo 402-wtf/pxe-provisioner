@@ -1,0 +1,11 @@
+port=0
+dhcp-range={{ansible_default_ipv4["address"]}},proxy,{{ansible_default_ipv4["netmask"]}}
+enable-tftp
+tftp-root={{tftp_root}}
+dhcp-userclass=set:ipxe,iPXE
+pxe-service=tag:#ipxe,x86PC,"PXE chainload to iPXE",undionly.kpxe
+pxe-service=tag:ipxe,x86PC,"iPXE",http://{{ansible_default_ipv4["address"]}}:8080/boot.ipxe
+pxe-service=tag:#ipxe,X86-64_EFI,"PXE chainload to iPXE UEFI",ipxe.efi
+pxe-service=tag:ipxe,X86-64_EFI,"iPXE UEFI",http://{{ansible_default_ipv4["address"]}}:8080/boot.ipxe
+log-queries
+log-dhcp
