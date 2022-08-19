@@ -3,3 +3,8 @@
 listening_interface: eno0
 tftp_root: /var/tftp
 matchbox_port: 8080
+
+# iPXE binaries
+ipxe_binaries:
+  - https://boot.ipxe.org/ipxe.efi
+  - https://boot.ipxe.org/undionly.kpxe

@@ -20,6 +20,17 @@
     dest: /etc/dnsmasq.conf
     mode: 644
 
+- name: Install iPXE binaries for TFTP server
+  become: true
+  ansible.builtin.get_url:
+    url: '{{ item }}'
+    dest: '{{ tftp_root }}'
+    mode: '0400'
+    owner: dnsmasq
+    group: dnsmasq
+  with_items:
+    - '{{ ipxe_binaries }}'
+
 - name: Enable dnsmasq service
   become: true
   ansible.builtin.service:
