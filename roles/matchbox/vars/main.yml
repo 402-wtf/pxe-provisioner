@@ -1,0 +1,4 @@
+---
+# vars file for matchbox
+install_path: '/usr/local/bin'
+matchbox_version: '0.9.1'

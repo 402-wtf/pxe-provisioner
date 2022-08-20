@@ -7,4 +7,5 @@
     - setup_ssh
     - python
     - dnsmasq
+    - matchbox
   tasks:

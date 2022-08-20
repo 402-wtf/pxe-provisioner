@@ -1,0 +1,39 @@
+---
+# Following the installation instructions: https://matchbox.psdn.io/deployment/
+- name: Create temporary download directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: matchbox
+  register: dl_dir
+
+- name: Download Matchbox
+  ansible.builtin.get_url:
+    url: 'https://github.com/poseidon/matchbox/releases/download/v{{ matchbox_version }}/matchbox-v{{ matchbox_version }}-linux-amd64.tar.gz'
+    dest: '{{ dl_dir.path }}'
+    mode: '0400'
+
+# TODO: Verify downloaded file signature
+# - name: Download Matchbox Signing Key
+#   become: true
+#   ansible.builtin.get_url:
+#     url: 'https://github.com/poseidon/matchbox/releases/download/v{{ matchbox_version }}/matchbox-v{{ matchbox_version }}-linux-amd64.tar.gz.asc'
+#     dest: '{{ dl_dir.path }}'
+#     mode: '0400'
+
+- name: Extract Matchbox
+  ansible.builtin.unarchive:
+    src: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64.tar.gz'
+    dest: '{{ dl_dir.path }}'
+    remote_src: true
+
+- name: Install Matchbox
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
+    src: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/matchbox'
+    dest: '{{ install_path }}'
+    mode: '0755'
+    owner: root
+    group: root
+  notify:
+    - "Delete temporary directories"
