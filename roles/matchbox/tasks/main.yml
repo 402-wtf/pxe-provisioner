@@ -5,6 +5,8 @@
     state: directory
     suffix: matchbox
   register: dl_dir
+  notify:
+    - "Delete temporary directories"
 
 - name: Download Matchbox
   ansible.builtin.get_url:
@@ -35,5 +37,3 @@
     mode: '0755'
     owner: root
     group: root
-  notify:
-    - "Delete temporary directories"

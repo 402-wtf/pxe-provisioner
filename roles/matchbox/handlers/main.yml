@@ -1,2 +1,6 @@
 ---
 # handlers file for matchbox
+- name: "Delete temporary directories"
+  ansible.builtin.file:
+    path: "{{ dl_dir.path }}"
+    state: absent
