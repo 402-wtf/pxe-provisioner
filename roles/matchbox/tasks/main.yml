@@ -145,7 +145,7 @@
 - name: Start Matchbox and reload daemon
   become: true
   ansible.builtin.systemd:
-    state: started
+    state: restarted
     daemon_reload: true
     name: matchbox
     enabled: true
