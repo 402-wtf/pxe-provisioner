@@ -142,6 +142,47 @@
   loop: '{{ matchbox_cert_files }}'
   when: matchbox_certs_need_generation
 
+- name: Verify if assets need to be downloaded
+  ansible.builtin.stat:
+    path: '{{ matchbox_asset_directory }}/flatcar/{{ matchbox_flatcar_arch }}/{{ matchbox_flatcar_version }}'
+  register: asset_dir_downloaded
+
+- name: Download Flatcar signing key
+  ansible.builtin.get_url:
+    url: 'https://www.flatcar.org/security/image-signing-key/Flatcar_Image_Signing_Key.asc'
+    dest: '{{ dl_dir.path }}'
+  when: asset_dir_downloaded.stat.exists == false
+
+- name: Trust Flatcar Signing Key
+  ansible.builtin.command:
+    cmd: 'gpg --import --keyid-format LONG {{ dl_dir.path }}/Flatcar_Image_Signing_Key.asc'
+  when: asset_dir_downloaded.stat.exists == false
+
+- name: Download boot assets
+  ansible.builtin.command:
+    cmd: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/get-flatcar {{ matchbox_flatcar_channel }} {{ matchbox_flatcar_version }} dl'
+    chdir: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/'
+  when: asset_dir_downloaded.stat.exists == false
+
+- name: Create Matchbox flatcar asset directory
+  become: true
+  ansible.builtin.file:
+    path: '{{ matchbox_asset_directory }}/flatcar/{{ matchbox_flatcar_arch }}/{{ matchbox_flatcar_version }}'
+    state: directory
+    mode: '0755'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+
+- name: Copy boot assets to Matchbox assets directory
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
+    src: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/dl/flatcar/{{ matchbox_flatcar_version }}/'
+    dest: '{{ matchbox_asset_directory }}/flatcar/{{ matchbox_flatcar_arch }}/{{ matchbox_flatcar_version }}'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+  when: asset_dir_downloaded.stat.exists == false
+
 - name: Start Matchbox and reload daemon
   become: true
   ansible.builtin.systemd:

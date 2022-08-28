@@ -12,4 +12,6 @@ matchbox_cert_files:
   - server.key
   - client.crt
   - client.key
-
+matchbox_flatcar_channel: 'stable'
+matchbox_flatcar_version: '3227.2.1'
+matchbox_flatcar_arch: 'amd64'
