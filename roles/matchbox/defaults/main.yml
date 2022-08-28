@@ -1,2 +1,15 @@
 ---
 # defaults file for matchbox
+install_path: '/usr/local/bin'
+matchbox_version: '0.9.1'
+matchbox_user_group: 'matchbox'
+matchbox_asset_directory: '/var/lib/matchbox/assets'
+matchbox_working_directory: '/var/lib/matchbox'
+matchbox_hostname: 'matchbox.example.com'
+matchbox_cert_files:
+  - ca.crt
+  - server.crt
+  - server.key
+  - client.crt
+  - client.key
+

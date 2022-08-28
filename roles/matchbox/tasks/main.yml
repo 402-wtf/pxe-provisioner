@@ -37,3 +37,115 @@
     mode: '0755'
     owner: root
     group: root
+
+- name: Create matchox group
+  become: true
+  ansible.builtin.group:
+    name: '{{ matchbox_user_group }}'
+    state: present
+    system: true
+
+- name: Create matchox user
+  become: true
+  ansible.builtin.user:
+    name: '{{ matchbox_user_group }}'
+    comment: Matchbox Service Account
+    group: '{{ matchbox_user_group }}'
+    create_home: false
+    system: true
+
+- name: Create Matchbox asset directory
+  become: true
+  ansible.builtin.file:
+    path: '{{ matchbox_asset_directory }}'
+    state: directory
+    mode: '0755'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+
+- name: Create Matchbox working directory
+  become: true
+  ansible.builtin.file:
+    path: '{{ matchbox_working_directory }}'
+    state: directory
+    mode: '0755'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+
+- name: Install Matchbox service file
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
+    src: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/contrib/systemd/matchbox.service'
+    dest: '/etc/systemd/system/matchbox.service'
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create systemd matchbox overrides folder
+  become: true
+  ansible.builtin.file:
+    path: '/etc/systemd/system/matchbox.service.d'
+    state: directory
+    mode: '0755'
+    group: root
+    owner: root
+
+- name: Install Matchbox systemd override
+  become: true
+  ansible.builtin.template:
+    src: systemd_override.conf.j2
+    dest: '/etc/systemd/system/matchbox.service.d/override.conf'
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create Matchbox configuration directory
+  become: true
+  ansible.builtin.file:
+    path: '/etc/matchbox'
+    state: directory
+    mode: '0755'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+
+- name: Verify if certificates need generation
+  ansible.builtin.stat:
+    path: '/etc/matchbox/{{ item }}'
+  loop: '{{ matchbox_cert_files }}'
+  register: matchbox_certs
+
+- name: Filter verify results
+  ansible.builtin.set_fact:
+    matchbox_certs: '{{ matchbox_certs.results | map(attribute="stat.exists") }}'
+
+- name: Process verify results
+  ansible.builtin.set_fact:
+    matchbox_certs_need_generation: '{{ matchbox_certs.0 == false or matchbox_certs.1 == false  or matchbox_certs.2 == false or matchbox_certs.3 == false or matchbox_certs.4 == false }}'
+
+- name: Create certificates for Matchbox
+  ansible.builtin.command:
+    cmd: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/tls/cert-gen'
+    chdir: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/tls/'
+  environment:
+    SAN: 'DNS.1:{{ matchbox_hostname }},IP.1:{{ ansible_default_ipv4["address"] }}'
+  when: matchbox_certs_need_generation
+
+- name: Copy generated certificates to Matchbox configuration directory
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
+    src: '{{ dl_dir.path }}/matchbox-v{{ matchbox_version }}-linux-amd64/scripts/tls/{{ item }}'
+    dest: '/etc/matchbox/'
+    group: '{{ matchbox_user_group }}'
+    owner: '{{ matchbox_user_group }}'
+  loop: '{{ matchbox_cert_files }}'
+  when: matchbox_certs_need_generation
+
+- name: Start Matchbox and reload daemon
+  become: true
+  ansible.builtin.systemd:
+    state: started
+    daemon_reload: true
+    name: matchbox
+    enabled: true
